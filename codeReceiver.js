@@ -10,8 +10,6 @@
  * NOTE: Planning to add the deploying feature with auth here. (Need fix again.)
  */
 'use strict';
-var redisPort = 6379;
-var redisHost = "127.0.0.1";
 
 var redis = require("redis");
 var rclient;
