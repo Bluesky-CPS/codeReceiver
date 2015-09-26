@@ -16,10 +16,14 @@ var fs = require('fs');
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 var bodyParser = require('body-parser');
+var cors = require('cors');
 var express = require('express');
 
 var setting = {};
 var rclient;
+var corsOptions = {
+	origin: '*'
+};
 
 function codeReceiver(){
 	var self = this;
@@ -74,6 +78,7 @@ codeReceiver.prototype.listen = function(port){
 	var self = this;
 	var app = express();
 	app.use(bodyParser());
+	app.use(cors());
 	var codeReceiver = app.listen(this.setting.listenport, function () {
 		var host = codeReceiver.address().address;
 		var port = codeReceiver.address().port;
@@ -86,7 +91,7 @@ codeReceiver.prototype.listen = function(port){
 	// NOTE[testing here]: 
 	// curl -v http://0.0.0.0:8595/getcode?username=test
 	// {"username","test", "codeList":["LyoqDQogKiB0ZXN0DQogKi8NCm9uTGVkKCJ4LngueC54IiwgIjIxIik7DQppZih0cnVlKXsNCiAgICBjb25zb2xlLmxvZygic3Nzc3Nzc3MiKTsNCn0NCm9mZkxlZCgieC54LngueCIsICIyMSIpOw==","b25MZWQoIngueC54LngiLCAiMjEiKTsNCmlmKHRydWUpew0KICAgIGNvbnNvbGUubG9nKCJzc3Nzc3NzcyIpOw0KfQ=="]}
-	app.get('/getcode', function (req, res, next) {
+	app.get('/getcode', cors(corsOptions), function (req, res, next) {
 		var username = req.param('username');
 		next();
 	}, function(req, res){
@@ -113,7 +118,7 @@ codeReceiver.prototype.listen = function(port){
 	// curl -v -F "username=test" -F "ip=0.0.0.0:8595" -F "code=b25MZWQoIngueC54LngiLCAiMjEiKTsNCmlmKHRydWUpew0KICAgIGNvbnNvbGUubG9nKCJzc3Nzc3NzcyIpOw0KfQ==" http://0.0.0.0:8595/
 	// curl -v -d "username=test" -d "ip=0.0.0.0:8595" -d "code=b25MZWQoIngueC54LngiLCAiMjEiKTsNCmlmKHRydWUpew0KICAgIGNvbnNvbGUubG9nKCJzc3Nzc3NzcyIpOw0KfQ==" http://0.0.0.0:8595/
 	// curl -v -d "username=test" -d "ip=0.0.0.0:8595" -d "code=LyoqDQogKiB0ZXN0DQogKi8NCm9uTGVkKCJ4LngueC54IiwgIjIxIik7DQppZih0cnVlKXsNCiAgICBjb25zb2xlLmxvZygic3Nzc3Nzc3MiKTsNCn0NCm9mZkxlZCgieC54LngueCIsICIyMSIpOw==" http://0.0.0.0:8595/
-	app.post('/', function(req, res){
+	app.post('/', cors(corsOptions), function(req, res, next){
 		var code = req.body.code;
 		var username = req.body.username;
 		var redisClient = redis.createClient(self.setting.redis.port, self.setting.redis.host);
@@ -122,6 +127,7 @@ codeReceiver.prototype.listen = function(port){
 		console.log("username: " + username);
 		console.log("Pushing the code details: " + base64_code);
 		redisClient.sadd(username, base64_code, redis.print);
+		res.setHeader("Access-Control-Allow-Origin", "*");
 		res.send("push success!\r\n");
 	});
 }
