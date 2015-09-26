@@ -101,7 +101,7 @@ codeReceiver.prototype.listen = function(port){
 			var decodedArr = decode(reply);
 			var decodedArrJSON = toJSONlistStr(decodedArr);
 			console.log(decodedArrJSON);
-			var replyJSON = "{\"username\",\"" + username +"\", \"codeList\":" + decodedArrJSON + "}";
+			var replyJSON = "{\"username\":\"" + username +"\", \"codeList\":" + decodedArrJSON + "}";
 			res.send(replyJSON + "\r\n");
 			console.log(decodedArr);
 		});
