@@ -12,15 +12,14 @@
 'use strict';
 
 var redis = require("redis");
-var rclient;
 var fs = require('fs');
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 var bodyParser = require('body-parser');
 var express = require('express');
 
-
 var setting = {};
+var rclient;
 
 function codeReceiver(){
 	var self = this;
@@ -73,16 +72,13 @@ codeReceiver.prototype.initSetting = function(){
 }
 codeReceiver.prototype.listen = function(port){
 	var self = this;
-
 	var app = express();
 	app.use(bodyParser());
-
 	var codeReceiver = app.listen(this.setting.listenport, function () {
 		var host = codeReceiver.address().address;
 		var port = codeReceiver.address().port;
 		console.log('Code receiver running on http://%s:%s', host, port);
 	});
-
 	app.get('/', function(req, res){
 		res.send("codeReceiver is running now.\r\n");
 	});
@@ -107,7 +103,7 @@ codeReceiver.prototype.listen = function(port){
 		console.log(res.encodedReply);
 	});
 
-	//NOTE[base64 encoded code sample list]
+	// NOTE[base64 encoded code sample list]
 	//    b25MZWQoIngueC54LngiLCAiMjEiKTsNCmlmKHRydWUpew0KICAgIGNvbnNvbGUubG9nKCJzc3Nzc3NzcyIpOw0KfQ==
 	//    LyoqDQogKiB0ZXN0DQogKi8NCm9uTGVkKCJ4LngueC54IiwgIjIxIik7DQppZih0cnVlKXsNCiAgICBjb25zb2xlLmxvZygic3Nzc3Nzc3MiKTsNCn0NCm9mZkxlZCgieC54LngueCIsICIyMSIpOw==
 	// NOTE[testing here]: 
@@ -129,8 +125,6 @@ codeReceiver.prototype.listen = function(port){
 		res.send("push success!\r\n");
 	});
 }
-
-
 
 function toJSONlistStr(arrDat){
 	var ret = "[]";
