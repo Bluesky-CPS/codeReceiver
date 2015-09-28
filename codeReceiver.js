@@ -100,12 +100,10 @@ codeReceiver.prototype.listen = function(port){
 		redisClient.smembers(username, function(err, reply){
 			var decodedArr = decode(reply);
 			var decodedArrJSON = toJSONlistStr(decodedArr);
-			console.log(decodedArrJSON);
-			var replyJSON = "{\"username\":\"" + username +"\", \"codeList\":" + decodedArrJSON + "}";
+			var replyJSON = "{\"username\":\"" + username +"\", \"codeList\":" + decodedArrJSON + ", \"serverTimestamp\":\""+ getTimestamp() +"\"}";
 			res.send(replyJSON + "\r\n");
-			console.log(decodedArr);
 		});
-		console.log(res.encodedReply);
+		//console.log("res.encodeReply: " , res.encodedReply);
 	});
 
 	// NOTE[base64 encoded code sample list]
@@ -123,10 +121,10 @@ codeReceiver.prototype.listen = function(port){
 		var username = req.body.username;
 		var redisClient = redis.createClient(self.setting.redis.port, self.setting.redis.host);
 		var base64_code = new Buffer(code).toString('base64');
-	
+		
 		console.log("username: " + username);
-		console.log("Pushing the code details: " + base64_code);
-		redisClient.sadd(username, base64_code, redis.print);
+		console.log("Pushing the code details: " + getTimestamp() + "|" + base64_code);
+		redisClient.sadd(username, getTimestamp() + "|" + base64_code, redis.print);
 		res.setHeader("Access-Control-Allow-Origin", "*");
 		res.send("push success!\r\n");
 	});
@@ -135,16 +133,36 @@ codeReceiver.prototype.listen = function(port){
 function toJSONlistStr(arrDat){
 	var ret = "[]";
 	if(typeof arrDat !== 'undefined' && arrDat !== null && Array.isArray(arrDat)){
-		var lenArr = arrDat.length;
+		var lenArr = arrDat.length
 		ret = "[";
 		for(var i = 0; i < lenArr; i++){
-			if(i < lenArr -1)
-				ret += "\"" + arrDat[i] + "\"" + ",";
-			else
-				ret += "\"" + arrDat[i] + "\"";
+			if(isJSON(arrDat[i])){
+				if(i < lenArr -1){
+					ret += "{\"pushedTimestamp\":\"" + arrDat[i].pushedTimestamp + "\",\"code\":\"" + arrDat[i].code + "\"},";
+				}else{
+					ret += "{\"pushedTimestamp\":\"" + arrDat[i].pushedTimestamp + "\",\"code\":\"" + arrDat[i].code + "\"}";
+				}
+			}else{
+				if(i < lenArr -1)
+					ret += "{\"code\":\"" + arrDat[i] + "\"" + "},";
+				else
+					ret += "{\"code\":\"" + arrDat[i] + "\"}";
+			}
 		}
 		ret += "]";
 	}
+	return ret;
+}
+
+function isJSON(jsondat){
+	var ret = false;
+	try{
+		JSON.parse(jsondat);
+		ret = true;
+	}catch(e){
+		ret = false;
+	}
+	ret |= (typeof jsondat == 'object' || typeof jsondat == 'Object');
 	return ret;
 }
 
@@ -154,11 +172,23 @@ function decode(arrDat){
 		var datElement = 'undefined';
 		var decodedStrBuf;
 		var decodedDat;
+		var splitedStrArr;
 		for(var i = 0; i < ret.length; i++){
-			datElement = ret[i];
-			decodedStrBuf = new Buffer(datElement, 'base64');
-			decodedDat = decodedStrBuf.toString();
-			ret[i] = decodedDat;
+			splitedStrArr = ret[i].split("|");
+			if(splitedStrArr.length > 1){
+				datElement = splitedStrArr[1];
+				decodedStrBuf = new Buffer(datElement, 'base64');
+				decodedDat = decodedStrBuf.toString();
+				ret[i] = {
+					'pushedTimestamp': splitedStrArr[0], 
+					'code':decodedDat
+				};
+			}else{
+				datElement = ret[i];
+				decodedStrBuf = new Buffer(datElement, 'base64');
+				decodedDat = decodedStrBuf.toString();
+				ret[i] = decodedDat;
+			}
 		}
 		return ret;
 	}else{
