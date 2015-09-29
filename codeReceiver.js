@@ -24,6 +24,12 @@ var rclient;
 var corsOptions = {
 	origin: '*'
 };
+var _e = {
+	rem: {
+		result: 'result',
+		error: 'error'
+	}
+};
 
 function codeReceiver(){
 	var self = this;
@@ -141,14 +147,19 @@ codeReceiver.prototype.listen = function(port){
 		var base64_code = new Buffer(code).toString('base64');
 		var result;
 		console.log(code);
+		res.setHeader("Access-Control-Allow-Origin", "*");
 
 		if(typeof pushedTimestamp !== 'undefined'){
-			result = redisClient.srem(username, pushedTimestamp + "|" + base64_code, redis.print);
+			redisClient.srem(username, pushedTimestamp + "|" + base64_code, function(err, reply){
+				console.log("redis obj: ", reply);
+				self.emit(_e.rem.result, reply);
+			});
 		}else{
-			result = redisClient.srem(username, base64_code, redis.print);
+			redisClient.srem(username, base64_code, function(err, reply){
+				console.log("redis obj: ", reply);
+				self.emit(_e.rem.result, reply);
+			});
 		}
-		console.log("result: ", result);
-		res.setHeader("Access-Control-Allow-Origin", "*");
 		res.send("Delete success!\r\n");
 	});
 }
