@@ -24,6 +24,12 @@ var rclient;
 var corsOptions = {
 	origin: '*'
 };
+var _e = {
+	rem: {
+		result: 'result',
+		error: 'error'
+	}
+};
 
 function codeReceiver(){
 	var self = this;
@@ -128,12 +134,40 @@ codeReceiver.prototype.listen = function(port){
 		res.setHeader("Access-Control-Allow-Origin", "*");
 		res.send("push success!\r\n");
 	});
+
+	// NOTE:
+	// curl -v -d "pushedTimestamp=[input the time here when test]" -d "username=test" -d "ip=0.0.0.0:8595" -d "code=LyoqDQogKiB0ZXN0DQogKi8NCm9uTGVkKCJ4LngueC54IiwgIjIxIik7DQppZih0cnVlKXsNCiAgICBjb25zb2xlLmxvZygic3Nzc3Nzc3MiKTsNCn0NCm9mZkxlZCgieC54LngueCIsICIyMSIpOw==" http://0.0.0.0:8595/rem
+	app.post('/rem', cors(corsOptions), function(req, res, next){
+		next();
+	}, function(req, res){
+		var code = req.body.code;
+		var pushedTimestamp = req.body.pushedTimestamp;
+		var username = req.body.username;
+		var redisClient = redis.createClient(self.setting.redis.port, self.setting.redis.host);
+		var base64_code = new Buffer(code).toString('base64');
+		var result;
+		console.log(code);
+		res.setHeader("Access-Control-Allow-Origin", "*");
+
+		if(typeof pushedTimestamp !== 'undefined'){
+			redisClient.srem(username, pushedTimestamp + "|" + base64_code, function(err, reply){
+				console.log("redis obj: ", reply);
+				self.emit(_e.rem.result, reply);
+			});
+		}else{
+			redisClient.srem(username, base64_code, function(err, reply){
+				console.log("redis obj: ", reply);
+				self.emit(_e.rem.result, reply);
+			});
+		}
+		res.send("Delete success!\r\n");
+	});
 }
 
 function toJSONlistStr(arrDat){
 	var ret = "[]";
 	if(typeof arrDat !== 'undefined' && arrDat !== null && Array.isArray(arrDat)){
-		var lenArr = arrDat.length
+		var lenArr = arrDat.length;
 		ret = "[";
 		for(var i = 0; i < lenArr; i++){
 			if(isJSON(arrDat[i])){
@@ -199,6 +233,16 @@ function decode(arrDat){
 function getTimestamp(){
 	var d = new Date();
 	return d.getTime();
+}
+function isInteger(dat){
+	var ret = false;
+	try{
+		var testint = parseInt(dat);
+		ret = true;
+	}catch(e){
+		ret = false;
+	}
+	return ret;
 }
 function base64_str_encoder(str){
 	return new Buffer(str).toString('base64');
