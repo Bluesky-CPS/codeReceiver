@@ -109,7 +109,7 @@ codeReceiver.prototype.listen = function(port){
 		var ip = req.connection.remoteAddress || req.socket.remoteAddress;
 		var url = ip;
 
-		dns.resolve4(url, function (err, addresses) {
+		/*dns.resolve4(url, function (err, addresses) {
 			if (err){
 				res.send("Internal server error.\r\n");
 				throw err;
@@ -127,7 +127,9 @@ codeReceiver.prototype.listen = function(port){
 					res.send("codeReceiver is running now.<br><br><table><tr><td align='right'>YOUR IP:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td>" + ip + "</td></tr><tr><td align='right'>YOUR CNAME:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td>" + cname + "</td></tr></table>\r\n");
 				});
 			});
-		});
+		});*/
+
+		res.send("codeReceiver is running now.\r\n");
 	});
 
 	// NOTE[testing here]: 
@@ -138,7 +140,7 @@ codeReceiver.prototype.listen = function(port){
 		next();
 	}, function(req, res){
 		// Dohere (kentouchuu).
-		var ip = req.connection.remoteAddress || req.socket.remoteAddress;
+		/*var ip = req.connection.remoteAddress || req.socket.remoteAddress;
 		var url = ip;
 		dns.resolve4(url, function (err, addresses) {
 			if (err){
@@ -157,7 +159,7 @@ codeReceiver.prototype.listen = function(port){
 					console.log("cname: ", cname);
 				});
 			});
-		});
+		});*/
 		// Begin push the code to redis.
 		var username = req.param('username');
 		var redisClient = redis.createClient(self.setting.redis.port, self.setting.redis.host);
