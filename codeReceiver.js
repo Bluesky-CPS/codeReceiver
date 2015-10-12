@@ -18,6 +18,7 @@ var EventEmitter = require('events').EventEmitter;
 var bodyParser = require('body-parser');
 var cors = require('cors');
 var express = require('express');
+var dns = require('dns');
 
 var setting = {};
 var rclient;
@@ -80,6 +81,19 @@ codeReceiver.prototype.initSetting = function(){
 	self.setting = this.setting;
 	setting = this.setting;
 }
+
+function toCname(hostnames, accessIP){
+	if(Array.isArray(hostnames)){
+		var cname = hostnames;
+		if(cname.length == 0){
+			cname.push(accessIP);
+		}
+		return cname;
+	}else{
+		return accessIP;
+	}
+}
+
 codeReceiver.prototype.listen = function(port){
 	var self = this;
 	var app = express();
@@ -91,7 +105,29 @@ codeReceiver.prototype.listen = function(port){
 		console.log('Code receiver running on http://%s:%s', host, port);
 	});
 	app.get('/', function(req, res){
-		res.send("codeReceiver is running now.\r\n");
+		var self = this;
+		var ip = req.connection.remoteAddress || req.socket.remoteAddress;
+		var url = ip;
+
+		dns.resolve4(url, function (err, addresses) {
+			if (err){
+				res.send("Internal server error.\r\n");
+				throw err;
+			}
+			
+			addresses.forEach(function (a) {
+				dns.reverse(a, function (err, hostnames) {
+					if (err) {
+						res.send("Internal server error.\r\n");
+						throw err;
+					}
+
+					var cname = toCname(hostnames, ip);
+
+					res.send("codeReceiver is running now.<br><br><table><tr><td align='right'>YOUR IP:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td>" + ip + "</td></tr><tr><td align='right'>YOUR CNAME:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td>" + cname + "</td></tr></table>\r\n");
+				});
+			});
+		});
 	});
 
 	// NOTE[testing here]: 
@@ -101,6 +137,28 @@ codeReceiver.prototype.listen = function(port){
 		var username = req.param('username');
 		next();
 	}, function(req, res){
+		// Dohere (kentouchuu).
+		var ip = req.connection.remoteAddress || req.socket.remoteAddress;
+		var url = ip;
+		dns.resolve4(url, function (err, addresses) {
+			if (err){
+				res.send("Internal server error.\r\n");
+				throw err;
+			}
+		
+			addresses.forEach(function (a) {
+				dns.reverse(a, function (err, hostnames) {
+					if (err) {
+						res.send("Internal server error.\r\n");
+						throw err;
+					}
+					var cname = toCname(hostnames, ip);
+					console.log("accessIP: ", ip);
+					console.log("cname: ", cname);
+				});
+			});
+		});
+		// Begin push the code to redis.
 		var username = req.param('username');
 		var redisClient = redis.createClient(self.setting.redis.port, self.setting.redis.host);
 		redisClient.smembers(username, function(err, reply){
@@ -110,6 +168,7 @@ codeReceiver.prototype.listen = function(port){
 			res.send(replyJSON + "\r\n");
 		});
 		//console.log("res.encodeReply: " , res.encodedReply);
+		// End push the code to redis.
 	});
 
 	// NOTE[base64 encoded code sample list]
@@ -122,9 +181,11 @@ codeReceiver.prototype.listen = function(port){
 	// curl -v -F "username=test" -F "ip=0.0.0.0:8595" -F "code=b25MZWQoIngueC54LngiLCAiMjEiKTsNCmlmKHRydWUpew0KICAgIGNvbnNvbGUubG9nKCJzc3Nzc3NzcyIpOw0KfQ==" http://0.0.0.0:8595/
 	// curl -v -d "username=test" -d "ip=0.0.0.0:8595" -d "code=b25MZWQoIngueC54LngiLCAiMjEiKTsNCmlmKHRydWUpew0KICAgIGNvbnNvbGUubG9nKCJzc3Nzc3NzcyIpOw0KfQ==" http://0.0.0.0:8595/
 	// curl -v -d "username=test" -d "ip=0.0.0.0:8595" -d "code=LyoqDQogKiB0ZXN0DQogKi8NCm9uTGVkKCJ4LngueC54IiwgIjIxIik7DQppZih0cnVlKXsNCiAgICBjb25zb2xlLmxvZygic3Nzc3Nzc3MiKTsNCn0NCm9mZkxlZCgieC54LngueCIsICIyMSIpOw==" http://0.0.0.0:8595/
+//%3D
 	app.post('/', cors(corsOptions), function(req, res, next){
 		var code = req.body.code;
 		var username = req.body.username;
+		//console.log(code.toLoverCase().replace("%3d", "="));
 		var redisClient = redis.createClient(self.setting.redis.port, self.setting.redis.host);
 		var base64_code = new Buffer(code).toString('base64');
 		
