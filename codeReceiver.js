@@ -25,6 +25,7 @@ var rclient;
 var corsOptions = {
 	origin: '*'
 };
+var sauth = "default";
 var _e = {
 	rem: {
 		result: 'result',
@@ -62,10 +63,20 @@ function codeReceiver(settingArg){
 		this.initSetting();
 	}
 
+	if(process.env.CODEREC_AUTH !== 'undefined'){
+		this.sauth = process.env.CODEREC_AUTH;
+		self.sauth = process.env.CODEREC_AUTH;
+	}
+
 	self.setting = this.setting;
 	setting = this.setting;
 
+
 	rclient = redis.createClient(self.setting.redis.port, self.setting.redis.host);
+	
+	if(this.sauth !== 'default' && this.auth !== 'undefined'){
+		rclient.auth(this.sauth);
+	}
 }
 util.inherits(codeReceiver, EventEmitter);
 
@@ -163,6 +174,9 @@ codeReceiver.prototype.listen = function(port){
 		// Begin push the code to redis.
 		var username = req.param('username');
 		var redisClient = redis.createClient(self.setting.redis.port, self.setting.redis.host);
+		if(self.sauth !== 'default' && self.auth !== 'undefined'){
+			redisClient.auth(self.sauth);
+		}
 		redisClient.smembers(username, function(err, reply){
 			var decodedArr = decode(reply);
 			var decodedArrJSON = toJSONlistStr(decodedArr);
@@ -189,6 +203,9 @@ codeReceiver.prototype.listen = function(port){
 		var username = req.body.username;
 		//console.log(code.toLoverCase().replace("%3d", "="));
 		var redisClient = redis.createClient(self.setting.redis.port, self.setting.redis.host);
+		if(self.sauth !== 'default' && self.auth !== 'undefined'){
+			redisClient.auth(self.sauth);
+		}
 		var base64_code = new Buffer(code).toString('base64');
 		
 		console.log("username: " + username);
@@ -207,6 +224,9 @@ codeReceiver.prototype.listen = function(port){
 		var pushedTimestamp = req.body.pushedTimestamp;
 		var username = req.body.username;
 		var redisClient = redis.createClient(self.setting.redis.port, self.setting.redis.host);
+		if(self.sauth !== 'default' && self.auth !== 'undefined'){
+			redisClient.auth(self.sauth);
+		}
 		var base64_code = new Buffer(code).toString('base64');
 		var result;
 		console.log(code);
